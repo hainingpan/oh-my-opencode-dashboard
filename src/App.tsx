@@ -2,6 +2,11 @@ import * as React from "react";
 import { computeWaitingDing } from "./ding-policy";
 import { playDing, unlockAudio } from "./sound";
 
+const APP_VERSION =
+  typeof __APP_VERSION__ === "string" && __APP_VERSION__.trim().length > 0 ? __APP_VERSION__ : "0.0.0";
+
+const APP_TITLE = `Agent Dashboard (v${APP_VERSION})`;
+
 type BackgroundTask = {
   id: string;
   description: string;
@@ -187,6 +192,11 @@ export default function App() {
   }, []);
 
   React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.title = APP_TITLE;
+  }, []);
+
+  React.useEffect(() => {
     soundEnabledRef.current = soundEnabled;
   }, [soundEnabled]);
 
@@ -358,7 +368,7 @@ export default function App() {
           <div className="brand">
             <div className="brandMark" aria-hidden="true" />
             <div className="brandText">
-              <h1>Agent Dashboard</h1>
+              <h1>{APP_TITLE}</h1>
               <p>
                 Live view (no prompts or tool arguments rendered).
                 {!connected && errorHint ? <span className="hint"> - {errorHint}</span> : null}
