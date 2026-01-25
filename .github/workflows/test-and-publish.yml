@@ -1,0 +1,72 @@
+name: Test and Publish
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Test
+        run: bun test
+
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Check if already published
+        id: check
+        run: |
+          PKG_NAME=$(jq -r '.name' package.json)
+          PKG_VERSION=$(jq -r '.version' package.json)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://registry.npmjs.org/${PKG_NAME}/${PKG_VERSION}")
+          if [ "$STATUS" = "200" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "✓ ${PKG_NAME}@${PKG_VERSION} already published"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure npm auth
+        if: steps.check.outputs.skip != 'true'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cat > "$HOME/.npmrc" <<EOF
+          //registry.npmjs.org/:_authToken=${NPM_TOKEN}
+          registry=https://registry.npmjs.org/
+          always-auth=true
+          EOF
+
+      - name: Publish
+        if: steps.check.outputs.skip != 'true'
+        run: bun publish --access public
