@@ -2,6 +2,8 @@
 import { spawn } from 'node:child_process';
 import { exit } from 'node:process';
 
+import { findAvailablePort } from './ports';
+
 interface CliArgs {
   project: string;
   port: number;
@@ -68,11 +70,17 @@ function spawnProcess(command: string, args: string[], description: string): Pro
 
 async function main() {
   const { project, port } = parseArgs();
+
+  const host = '127.0.0.1';
+  const resolvedPort = await findAvailablePort({ host, preferredPort: port });
+  if (resolvedPort !== port) {
+    console.log(`Port ${port} is busy; using ${resolvedPort} instead`);
+  }
   
   console.log(`Starting dev servers for project: ${project}`);
-  console.log(`API port: ${port}`);
+  console.log(`API port: ${resolvedPort}`);
 
-  const apiArgs = ['run', 'src/server/dev.ts', '--', '--project', project, '--port', port.toString()];
+  const apiArgs = ['run', 'src/server/dev.ts', '--', '--project', project, '--port', resolvedPort.toString()];
   const uiArgs = ['run', 'dev:ui'];
 
   const apiServer = spawn('bun', apiArgs, {
@@ -82,7 +90,11 @@ async function main() {
 
   const uiServer = spawn('bun', uiArgs, {
     stdio: 'inherit',
-    shell: true
+    shell: true,
+    env: {
+      ...process.env,
+      OMO_DASHBOARD_API_PORT: resolvedPort.toString(),
+    },
   });
 
   // Handle signals and clean up both processes
@@ -150,7 +162,7 @@ async function main() {
   });
 
   console.log('Both servers started successfully');
-  console.log(`API server: http://127.0.0.1:${port}`);
+  console.log(`API server: http://127.0.0.1:${resolvedPort}`);
   console.log('UI server: check Vite output for URL');
 }
 

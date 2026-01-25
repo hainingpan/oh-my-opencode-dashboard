@@ -36,7 +36,7 @@ describe("pickActiveSessionId", () => {
   it("falls back to newest main session metadata for directory", () => {
     const storageRoot = mkStorageRoot()
     const storage = getStorageRoots(storageRoot)
-    const projectRoot = "/tmp/project"
+    const projectRoot = "/tmp/project/"
     const projectID = "proj_1"
     fs.mkdirSync(path.join(storage.session, projectID), { recursive: true })
 
@@ -45,7 +45,7 @@ describe("pickActiveSessionId", () => {
       JSON.stringify({
         id: "ses_1",
         projectID,
-        directory: projectRoot,
+        directory: "/tmp/project",
         time: { created: 1, updated: 10 },
       }),
       "utf8"
@@ -55,7 +55,7 @@ describe("pickActiveSessionId", () => {
       JSON.stringify({
         id: "ses_2",
         projectID,
-        directory: projectRoot,
+        directory: "/tmp/project",
         time: { created: 2, updated: 20 },
       }),
       "utf8"

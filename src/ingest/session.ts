@@ -1,6 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { getOpenCodeStorageDir } from "./paths"
+import { getOpenCodeStorageDir, realpathSafe } from "./paths"
 
 export type SessionMetadata = {
   id: string
@@ -81,6 +81,14 @@ export function readMainSessionMetas(
 ): SessionMetadata[] {
   if (!fs.existsSync(sessionStorage)) return []
 
+  const directoryNeedle = typeof directoryFilter === "string" && directoryFilter.length > 0
+    ? ((): string => {
+        const abs = path.resolve(directoryFilter)
+        const real = realpathSafe(abs) ?? abs
+        return path.normalize(real)
+      })()
+    : null
+
   const metas: SessionMetadata[] = []
   try {
     const projectDirs = fs.readdirSync(sessionStorage, { withFileTypes: true })
@@ -93,7 +101,14 @@ export function readMainSessionMetas(
           const content = fs.readFileSync(path.join(projectPath, file), "utf8")
           const meta = JSON.parse(content) as SessionMetadata
           if (meta.parentID) continue
-          if (directoryFilter && meta.directory !== directoryFilter) continue
+
+          if (directoryNeedle) {
+            const metaAbs = path.resolve(meta.directory)
+            const metaReal = realpathSafe(metaAbs) ?? metaAbs
+            const metaDir = path.normalize(metaReal)
+            if (metaDir !== directoryNeedle) continue
+          }
+
           metas.push(meta)
         } catch {
           continue

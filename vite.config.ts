@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:51234",
+        target: `http://127.0.0.1:${process.env.OMO_DASHBOARD_API_PORT ?? "51234"}`,
         changeOrigin: true,
       },
     },
