@@ -22,15 +22,12 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
-if (!projectPath) {
-  console.error('Error: --project argument is required');
-  process.exit(1);
-}
+const resolvedProjectPath = projectPath ?? process.cwd()
 
 const app = new Hono()
 
 const store = createDashboardStore({
-  projectRoot: projectPath,
+  projectRoot: resolvedProjectPath,
   storageRoot: getOpenCodeStorageDir(),
   watch: true,
   pollIntervalMs: 2000,

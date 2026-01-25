@@ -14,7 +14,13 @@ Local-only, read-only dashboard for viewing OhMyOpenCode agent progress.
 
 ## Install (npm)
 
-Run without installing globally:
+Run without installing globally (from your target project directory):
+
+```bash
+bunx oh-my-opencode-dashboard@latest
+```
+
+Or specify a project path explicitly:
 
 ```bash
 bunx -p oh-my-opencode-dashboard oh-my-opencode-dashboard -- --project /absolute/path/to/your/project
@@ -29,12 +35,12 @@ bun add -g oh-my-opencode-dashboard
 Then:
 
 ```bash
-oh-my-opencode-dashboard --project /absolute/path/to/your/project
+oh-my-opencode-dashboard
 ```
 
 Options:
 
-- `--project <path>` (required): project root that contains `.sisyphus/`
+- `--project <path>` (optional): project root that contains `.sisyphus/` (defaults to current working directory)
 - `--port <number>` (optional): default 51234
 
 ## Install (from source)

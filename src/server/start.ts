@@ -15,12 +15,7 @@ const { values } = parseArgs({
   allowPositionals: true,
 })
 
-const project = values.project
-if (!project) {
-  console.error('Error: --project is required')
-  console.error('Usage: oh-my-opencode-dashboard --project /absolute/path/to/your/project [--port 51234]')
-  process.exit(1)
-}
+const project = values.project ?? process.cwd()
 
 const port = parseInt(values.port || '51234')
 

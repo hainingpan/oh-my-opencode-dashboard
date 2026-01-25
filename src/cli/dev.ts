@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { spawn } from 'node:child_process';
-import { exit } from 'node:process';
+import { cwd, exit } from 'node:process';
 
 import { findAvailablePort } from './ports';
 
@@ -32,40 +32,7 @@ function parseArgs(): CliArgs {
     }
   }
 
-  if (!project) {
-    console.error('Error: --project is required');
-    console.error('Usage: bun run src/cli/dev.ts --project <project-path> [--port <port>]');
-    exit(1);
-  }
-
-  return { project, port };
-}
-
-function spawnProcess(command: string, args: string[], description: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    console.log(`Starting ${description}...`);
-    
-    const child = spawn(command, args, {
-      stdio: 'inherit',
-      shell: true
-    });
-
-    child.on('error', (error) => {
-      console.error(`Failed to start ${description}:`, error.message);
-      reject(error);
-    });
-
-    child.on('exit', (code, signal) => {
-      if (signal) {
-        console.log(`${description} killed by signal: ${signal}`);
-      } else if (code !== 0) {
-        console.log(`${description} exited with code: ${code}`);
-      } else {
-        console.log(`${description} exited successfully`);
-      }
-      resolve();
-    });
-  });
+  return { project: project ?? cwd(), port };
 }
 
 async function main() {
