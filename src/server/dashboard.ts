@@ -1,6 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { readBoulderState, readPlanProgress } from "../ingest/boulder"
+import { readBoulderState, readPlanProgress, readPlanSteps, type PlanStep } from "../ingest/boulder"
 import { deriveBackgroundTasks } from "../ingest/background-tasks"
 import { deriveTimeSeriesActivity, type TimeSeriesPayload } from "../ingest/timeseries"
 import { getMainSessionView, getStorageRoots, pickActiveSessionId, readMainSessionMetas, type OpenCodeStorageRoots, type SessionMetadata } from "../ingest/session"
@@ -19,6 +19,7 @@ export type DashboardPayload = {
     total: number
     path: string
     statusPill: string
+    steps: PlanStep[]
   }
   backgroundTasks: Array<{
     id: string
@@ -70,6 +71,7 @@ export function buildDashboardPayload(opts: {
   const planName = boulder?.plan_name ?? "(no active plan)"
   const planPath = boulder?.active_plan ?? ""
   const plan = boulder ? readPlanProgress(opts.projectRoot, boulder.active_plan) : { total: 0, completed: 0, isComplete: false, missing: true }
+  const planSteps = boulder ? readPlanSteps(opts.projectRoot, boulder.active_plan) : { missing: true, steps: [] as PlanStep[] }
 
   const sessionId = pickActiveSessionId({
     projectRoot: opts.projectRoot,
@@ -114,6 +116,7 @@ export function buildDashboardPayload(opts: {
       total: plan.total,
       path: planPath,
       statusPill: planStatusPill(plan),
+      steps: planSteps.missing ? [] : planSteps.steps,
     },
     backgroundTasks: tasks.map((t) => ({
       id: t.id,

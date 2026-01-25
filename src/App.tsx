@@ -57,6 +57,7 @@ type DashboardPayload = {
     total: number;
     path: string;
     statusPill: string;
+    steps?: Array<{ checked: boolean; text: string }>;
   };
   backgroundTasks: BackgroundTask[];
   timeSeries: TimeSeries;
@@ -335,6 +336,7 @@ export default function App() {
   const [copyState, setCopyState] = React.useState<"idle" | "ok" | "err">("idle");
   const [soundEnabled, setSoundEnabled] = React.useState(false);
   const [soundUnlocked, setSoundUnlocked] = React.useState(false);
+  const [planOpen, setPlanOpen] = React.useState(false);
   const [errorHint, setErrorHint] = React.useState<string | null>(null);
 
   const timerRef = React.useRef<number | null>(null);
@@ -752,6 +754,16 @@ export default function App() {
                 <h2>Plan progress</h2>
                 <span className={`pill pill-${statusTone(data.planProgress.statusPill)}`}>{data.planProgress.statusPill}</span>
               </div>
+              <div className="cardHeader" style={{ marginTop: 8 }}>
+                <button
+                  className="button"
+                  type="button"
+                  onClick={() => setPlanOpen((v) => !v)}
+                  aria-expanded={planOpen}
+                >
+                  {planOpen ? "Hide steps" : "Show steps"}
+                </button>
+              </div>
               <div className="kv">
                 <div className="kvRow">
                   <div className="kvKey">NAME</div>
@@ -767,7 +779,19 @@ export default function App() {
                   </div>
                 </div>
               </div>
-              <div className="progressWrap" aria-label="progress">
+              {planOpen ? (
+                <div className="divider" />
+              ) : null}
+              {planOpen ? (
+                <div className="mono" style={{ fontSize: 12, lineHeight: 1.5 }}>
+                  {(data.planProgress.steps ?? []).length > 0
+                    ? (data.planProgress.steps ?? []).map((s, idx) => (
+                        <div key={`${idx}-${s.checked ? "x" : "_"}-${s.text}`}>[{s.checked ? "x" : " "}] {s.text || "(empty)"}</div>
+                      ))
+                    : "(no steps detected)"}
+                </div>
+              ) : null}
+              <div className="progressWrap">
                 <div className="progressTrack">
                   <div className="progressFill" style={{ width: `${planPercent}%` }} />
                 </div>
@@ -779,7 +803,7 @@ export default function App() {
           <section className="card">
             <div className="cardHeader">
               <h2>Background tasks</h2>
-              <span className="badge" aria-label="count">
+              <span className="badge">
                 {data.backgroundTasks.length}
               </span>
             </div>

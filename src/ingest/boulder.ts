@@ -16,6 +16,11 @@ export type PlanProgress = {
   missing: boolean
 }
 
+export type PlanStep = {
+  checked: boolean
+  text: string
+}
+
 export function readBoulderState(projectRoot: string): BoulderState | null {
   const filePath = assertAllowedPath({
     candidatePath: path.join(projectRoot, ".sisyphus", "boulder.json"),
@@ -46,6 +51,22 @@ export function getPlanProgressFromMarkdown(content: string): Omit<PlanProgress,
   }
 }
 
+export function getPlanStepsFromMarkdown(content: string): PlanStep[] {
+  const lines = content.split(/\r?\n/)
+  const steps: PlanStep[] = []
+
+  for (const raw of lines) {
+    const line = raw.trim()
+    const m = line.match(/^[-*]\s*\[(\s|x|X)\]\s*(.*)$/)
+    if (!m) continue
+    const checked = m[1] === "x" || m[1] === "X"
+    const text = (m[2] ?? "").trim()
+    steps.push({ checked, text })
+  }
+
+  return steps
+}
+
 export function readPlanProgress(projectRoot: string, planPath: string): PlanProgress {
   let planReal: string
   try {
@@ -67,5 +88,28 @@ export function readPlanProgress(projectRoot: string, planPath: string): PlanPro
     return { ...progress, missing: false }
   } catch {
     return { total: 0, completed: 0, isComplete: false, missing: true }
+  }
+}
+
+export function readPlanSteps(projectRoot: string, planPath: string): { missing: boolean; steps: PlanStep[] } {
+  let planReal: string
+  try {
+    planReal = assertAllowedPath({
+      candidatePath: planPath,
+      allowedRoots: [projectRoot],
+    })
+  } catch {
+    return { missing: true, steps: [] }
+  }
+
+  if (!fs.existsSync(planReal)) {
+    return { missing: true, steps: [] }
+  }
+
+  try {
+    const content = fs.readFileSync(planReal, "utf8")
+    return { missing: false, steps: getPlanStepsFromMarkdown(content) }
+  } catch {
+    return { missing: true, steps: [] }
   }
 }
