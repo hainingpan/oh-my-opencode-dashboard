@@ -8,6 +8,14 @@ describe('API Routes', () => {
         mainSession: { agent: "x", currentTool: "-", lastUpdatedLabel: "never", session: "s", statusPill: "idle" },
         planProgress: { name: "p", completed: 0, total: 0, path: "", statusPill: "not started" },
         backgroundTasks: [],
+        timeSeries: {
+          windowMs: 0,
+          bucketMs: 0,
+          buckets: 0,
+          anchorMs: 0,
+          serverNowMs: 0,
+          series: [{ id: "overall-main", label: "Overall", tone: "muted", values: [] }],
+        },
         raw: null,
       }),
     })
@@ -23,6 +31,14 @@ describe('API Routes', () => {
         mainSession: { agent: "x", currentTool: "-", lastUpdatedLabel: "never", session: "s", statusPill: "idle" },
         planProgress: { name: "p", completed: 0, total: 0, path: "", statusPill: "not started" },
         backgroundTasks: [{ id: "1", description: "d", agent: "a", status: "queued", toolCalls: 0, lastTool: "-", timeline: "" }],
+        timeSeries: {
+          windowMs: 0,
+          bucketMs: 0,
+          buckets: 0,
+          anchorMs: 0,
+          serverNowMs: 0,
+          series: [{ id: "overall-main", label: "Overall", tone: "muted", values: [] }],
+        },
         raw: { ok: true },
       }),
     })
@@ -35,6 +51,7 @@ describe('API Routes', () => {
     expect(data).toHaveProperty("mainSession")
     expect(data).toHaveProperty("planProgress")
     expect(data).toHaveProperty("backgroundTasks")
+    expect(data).toHaveProperty("timeSeries")
     expect(data).toHaveProperty("raw")
     
     const sensitiveKeys = ["prompt", "input", "output", "error", "state"]

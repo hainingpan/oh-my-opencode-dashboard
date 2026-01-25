@@ -12,6 +12,9 @@
   --teal: #0f5a51;
   --teal-soft: rgba(15, 90, 81, 0.13);
 
+  --green: #1f6b3d;
+  --green-soft: rgba(31, 107, 61, 0.14);
+
   --sand: #6a5b3d;
   --sand-soft: rgba(135, 114, 71, 0.14);
 
@@ -414,9 +417,181 @@ body {
   font-size: 12px;
 }
 
+/* Time-series activity (Task 5 markup) */
+
+.timeSeries {
+  margin-top: 18px;
+  padding: 16px 18px 12px;
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(31, 36, 38, 0.06);
+  backdrop-filter: blur(10px);
+}
+
+.timeSeriesHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(31, 36, 38, 0.06);
+}
+
+.timeSeriesTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+
+.timeSeriesSub {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.timeSeriesAxisTop {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 18px;
+  margin-top: 8px;
+}
+
+.timeSeriesAxisTopLabels {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  color: rgba(31, 36, 38, 0.62);
+  font-variant-numeric: tabular-nums;
+}
+
+.timeSeriesAxisTopLabel {
+  white-space: nowrap;
+}
+
+.timeSeriesRows {
+  margin-top: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.timeSeriesRow {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 18px;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.timeSeriesRow + .timeSeriesRow {
+  border-top: 1px solid rgba(31, 36, 38, 0.06);
+  padding-top: 10px;
+}
+
+.timeSeriesRowLabel {
+  font-size: 20px;
+  line-height: 1.05;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+
+.timeSeriesSvgWrap {
+  position: relative;
+  height: 24px;
+  border-radius: 10px;
+  background:
+    radial-gradient(140px 36px at 8% 60%, rgba(255, 255, 255, 0.16), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
+  box-shadow:
+    inset 0 0 0 1px rgba(31, 36, 38, 0.04),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.10);
+}
+
+.timeSeriesSvg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.timeSeriesGridline {
+  stroke: rgba(31, 36, 38, 0.08);
+  shape-rendering: crispEdges;
+}
+
+.timeSeriesBar {
+  shape-rendering: crispEdges;
+}
+
+.timeSeriesBarBaseline {
+  fill: rgba(31, 36, 38, 0.20);
+}
+
+.timeSeriesBar--teal,
+.timeSeriesRow[data-tone="teal"] .timeSeriesBar {
+  fill: var(--teal);
+}
+
+.timeSeriesBar--sand,
+.timeSeriesRow[data-tone="sand"] .timeSeriesBar {
+  fill: var(--sand);
+}
+
+.timeSeriesBar--red,
+.timeSeriesRow[data-tone="red"] .timeSeriesBar {
+  fill: var(--red);
+}
+
+.timeSeriesBar--green,
+.timeSeriesRow[data-tone="green"] .timeSeriesBar {
+  fill: var(--green);
+}
+
+.timeSeriesBar--muted,
+.timeSeriesRow[data-tone="muted"] .timeSeriesBar {
+  fill: rgba(31, 36, 38, 0.36);
+}
+
+.timeSeriesAxisBottom {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 18px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(31, 36, 38, 0.06);
+}
+
+.timeSeriesAxisBottomLabels {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: rgba(31, 36, 38, 0.62);
+  font-variant-numeric: tabular-nums;
+}
+
+.timeSeriesAxisBottomLabel {
+  white-space: nowrap;
+}
+
 @media (max-width: 920px) {
   .grid2 {
     grid-template-columns: 1fr;
+  }
+
+  .timeSeriesAxisTop,
+  .timeSeriesRow,
+  .timeSeriesAxisBottom {
+    grid-template-columns: 140px 1fr;
+  }
+
+  .timeSeriesRowLabel {
+    font-size: 18px;
   }
 
   .kvRow {
@@ -433,6 +608,32 @@ body {
   .container {
     width: min(1120px, calc(100% - 28px));
     padding-top: 22px;
+  }
+
+  .timeSeries {
+    padding: 14px 14px 10px;
+  }
+
+  .timeSeriesAxisTop {
+    display: none;
+  }
+
+  .timeSeriesRow,
+  .timeSeriesAxisBottom {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .timeSeriesRow + .timeSeriesRow {
+    padding-top: 8px;
+  }
+
+  .timeSeriesRowLabel {
+    font-size: 16px;
+  }
+
+  .timeSeriesAxisBottomLabels {
+    font-size: 11px;
   }
 
   .topbar {

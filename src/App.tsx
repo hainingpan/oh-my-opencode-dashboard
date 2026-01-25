@@ -18,6 +18,31 @@ type BackgroundTask = {
   timeline: string;
 };
 
+type TimeSeriesTone = "muted" | "teal" | "red" | "green";
+
+type TimeSeriesSeriesId =
+  | "overall-main"
+  | "agent:sisyphus"
+  | "agent:prometheus"
+  | "agent:atlas"
+  | "background-total";
+
+type TimeSeriesSeries = {
+  id: TimeSeriesSeriesId;
+  label: string;
+  tone: TimeSeriesTone;
+  values: number[];
+};
+
+type TimeSeries = {
+  windowMs: number;
+  buckets: number;
+  bucketMs: number;
+  anchorMs: number;
+  serverNowMs: number;
+  series: TimeSeriesSeries[];
+};
+
 type DashboardPayload = {
   mainSession: {
     agent: string;
@@ -34,8 +59,117 @@ type DashboardPayload = {
     statusPill: string;
   };
   backgroundTasks: BackgroundTask[];
+  timeSeries: TimeSeries;
   raw: unknown;
 };
+
+const TIME_SERIES_DEFAULT_WINDOW_MS = 300_000;
+const TIME_SERIES_DEFAULT_BUCKET_MS = 2_000;
+const TIME_SERIES_DEFAULT_BUCKETS = Math.floor(TIME_SERIES_DEFAULT_WINDOW_MS / TIME_SERIES_DEFAULT_BUCKET_MS);
+
+const TIME_SERIES_SERIES_DEFS: Array<Pick<TimeSeriesSeries, "id" | "label" | "tone">> = [
+  { id: "overall-main", label: "Overall", tone: "muted" },
+  { id: "agent:sisyphus", label: "Sisyphus", tone: "teal" },
+  { id: "agent:prometheus", label: "Prometheus", tone: "red" },
+  { id: "agent:atlas", label: "Atlas", tone: "green" },
+  { id: "background-total", label: "Background tasks (total)", tone: "muted" },
+];
+
+function toFiniteNumber(value: unknown): number | null {
+  if (typeof value !== "number") return null;
+  if (!Number.isFinite(value)) return null;
+  return value;
+}
+
+function toNonNegativeCount(value: unknown): number {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.floor(n));
+}
+
+function makeZeroTimeSeries(opts: {
+  windowMs?: number;
+  buckets?: number;
+  bucketMs?: number;
+  anchorMs?: number;
+  serverNowMs?: number;
+}): TimeSeries {
+  const windowMs = Math.max(1, Math.floor(opts.windowMs ?? TIME_SERIES_DEFAULT_WINDOW_MS));
+  const bucketMs = Math.max(1, Math.floor(opts.bucketMs ?? TIME_SERIES_DEFAULT_BUCKET_MS));
+  const derivedBuckets = Math.floor(windowMs / bucketMs);
+  const buckets = Math.max(
+    1,
+    Math.floor(opts.buckets ?? (derivedBuckets > 0 ? derivedBuckets : TIME_SERIES_DEFAULT_BUCKETS))
+  );
+  const serverNowMs = Math.floor(opts.serverNowMs ?? 0);
+  const anchorMs = Math.floor(opts.anchorMs ?? 0);
+
+  const values = new Array<number>(buckets).fill(0);
+  return {
+    windowMs,
+    buckets,
+    bucketMs,
+    anchorMs,
+    serverNowMs,
+    series: TIME_SERIES_SERIES_DEFS.map((def) => ({ ...def, values: values.slice() })),
+  };
+}
+
+function normalizeTimeSeries(input: unknown, nowMsFallback: number): TimeSeries {
+  if (!input || typeof input !== "object") {
+    const bucketMs = TIME_SERIES_DEFAULT_BUCKET_MS;
+    const serverNowMs = nowMsFallback;
+    const anchorMs = Math.floor(serverNowMs / bucketMs) * bucketMs;
+    return makeZeroTimeSeries({
+      windowMs: TIME_SERIES_DEFAULT_WINDOW_MS,
+      bucketMs,
+      buckets: TIME_SERIES_DEFAULT_BUCKETS,
+      anchorMs,
+      serverNowMs,
+    });
+  }
+
+  const rec = input as Record<string, unknown>;
+
+  const windowMsRaw = toFiniteNumber(rec.windowMs ?? rec.window_ms);
+  const bucketsRaw = toFiniteNumber(rec.buckets);
+  const bucketMsRaw = toFiniteNumber(rec.bucketMs ?? rec.bucket_ms);
+  const bucketMs = Math.max(1, Math.floor(bucketMsRaw ?? TIME_SERIES_DEFAULT_BUCKET_MS));
+
+  const bucketsFromWindow = windowMsRaw && bucketMs ? Math.floor(windowMsRaw / bucketMs) : null;
+  const buckets = Math.max(1, Math.floor(bucketsRaw ?? bucketsFromWindow ?? TIME_SERIES_DEFAULT_BUCKETS));
+
+  const windowMs = Math.max(1, Math.floor(windowMsRaw ?? buckets * bucketMs));
+
+  const serverNowRaw = toFiniteNumber(rec.serverNowMs ?? rec.server_now_ms);
+  const serverNowMs = Math.floor(serverNowRaw ?? nowMsFallback);
+
+  const anchorRaw = toFiniteNumber(rec.anchorMs ?? rec.anchor_ms);
+  const anchorMs = Math.floor(anchorRaw ?? Math.floor(serverNowMs / bucketMs) * bucketMs);
+
+  const seriesInput = rec.series;
+  const byId = new Map<string, unknown>();
+  if (Array.isArray(seriesInput)) {
+    for (const s of seriesInput) {
+      if (!s || typeof s !== "object") continue;
+      const srec = s as Record<string, unknown>;
+      const id = typeof srec.id === "string" ? srec.id : typeof srec.key === "string" ? srec.key : null;
+      if (!id) continue;
+      if (!byId.has(id)) byId.set(id, srec);
+    }
+  }
+
+  const series: TimeSeriesSeries[] = TIME_SERIES_SERIES_DEFS.map((def) => {
+    const found = byId.get(def.id);
+    const valuesRaw = found && typeof found === "object" ? (found as Record<string, unknown>).values : null;
+    const parsed = Array.isArray(valuesRaw) ? valuesRaw.map(toNonNegativeCount) : [];
+    const trimmed = parsed.length > buckets ? parsed.slice(parsed.length - buckets) : parsed;
+    const padded = trimmed.length < buckets ? trimmed.concat(new Array<number>(buckets - trimmed.length).fill(0)) : trimmed;
+    return { ...def, values: padded };
+  });
+
+  return { windowMs, buckets, bucketMs, anchorMs, serverNowMs, series };
+}
 
 const FALLBACK_DATA: DashboardPayload = {
   mainSession: {
@@ -64,6 +198,13 @@ const FALLBACK_DATA: DashboardPayload = {
       timeline: "2026-01-01T00:00:00Z: 2m",
     },
   ],
+  timeSeries: makeZeroTimeSeries({
+    windowMs: TIME_SERIES_DEFAULT_WINDOW_MS,
+    bucketMs: TIME_SERIES_DEFAULT_BUCKET_MS,
+    buckets: TIME_SERIES_DEFAULT_BUCKETS,
+    anchorMs: 0,
+    serverNowMs: 0,
+  }),
   raw: {
     ok: false,
     hint: "API not reachable yet. Using placeholder data.",
@@ -96,6 +237,21 @@ function statusTone(status: string): "teal" | "sand" | "red" {
   if (s.includes("error") || s.includes("fail")) return "red";
   if (s.includes("run") || s.includes("progress") || s.includes("busy") || s.includes("think")) return "teal";
   return "sand";
+}
+
+function maxCount(values: number[]): number {
+  let max = 0;
+  for (const v of values) {
+    if (typeof v !== "number") continue;
+    if (!Number.isFinite(v)) continue;
+    if (v > max) max = v;
+  }
+  return max;
+}
+
+function barHeight(value: number, max: number, chartHeight: number): number {
+  if (!max || value <= 0) return 0;
+  return Math.max(1, Math.round((value / max) * chartHeight));
 }
 
 async function safeFetchJson(url: string): Promise<unknown> {
@@ -149,6 +305,8 @@ function toDashboardPayload(json: unknown): DashboardPayload {
   const completed = Number(plan.completed ?? plan.done ?? 0) || 0;
   const total = Number(plan.total ?? plan.count ?? 0) || 0;
 
+  const timeSeries = normalizeTimeSeries(anyJson.timeSeries, Date.now());
+
   return {
     mainSession: {
       agent: String(main.agent ?? FALLBACK_DATA.mainSession.agent),
@@ -165,6 +323,7 @@ function toDashboardPayload(json: unknown): DashboardPayload {
       statusPill: String(plan.statusPill ?? plan.status ?? FALLBACK_DATA.planProgress.statusPill),
     },
     backgroundTasks,
+    timeSeries,
     raw: json,
   };
 }
@@ -361,6 +520,23 @@ export default function App() {
   const liveLabel = connected ? "Live" : "Disconnected";
   const liveTone = connected ? "teal" : "sand";
 
+  const timeSeriesById = React.useMemo(() => {
+    const map = new Map<TimeSeriesSeriesId, TimeSeriesSeries>();
+    for (const s of data.timeSeries.series) {
+      if (s && typeof s.id === "string") {
+        map.set(s.id, s);
+      }
+    }
+    return map;
+  }, [data.timeSeries.series]);
+
+  const buckets = Math.max(1, data.timeSeries.buckets);
+  const bucketMs = Math.max(1, data.timeSeries.bucketMs);
+  const viewBox = `0 0 ${buckets} 28`;
+  const minuteStep = Math.max(1, Math.round(60_000 / bucketMs));
+
+  const overallValues = timeSeriesById.get("overall-main")?.values ?? [];
+
   return (
     <div className="page">
       <div className="container">
@@ -405,6 +581,137 @@ export default function App() {
         </header>
 
         <main className="stack">
+          <section className="timeSeries">
+            <div className="timeSeriesHeader">
+              <h2 className="timeSeriesTitle">Time-series activity</h2>
+              <p className="timeSeriesSub">Last 5 minutes</p>
+            </div>
+
+            <div className="timeSeriesAxisTop" aria-hidden="true">
+              <div />
+              <div className="timeSeriesAxisTopLabels">
+                <span className="timeSeriesAxisTopLabel">-5m</span>
+                <span className="timeSeriesAxisTopLabel">-4m</span>
+                <span className="timeSeriesAxisTopLabel">-3m</span>
+                <span className="timeSeriesAxisTopLabel">-1m</span>
+              </div>
+            </div>
+
+            <div className="timeSeriesRows">
+              {(
+                [
+                  {
+                    label: "Sisyphus",
+                    tone: "teal" as const,
+                    overlayId: "agent:sisyphus" as const,
+                    baseline: true,
+                  },
+                  {
+                    label: "Prometheus",
+                    tone: "red" as const,
+                    overlayId: "agent:prometheus" as const,
+                    baseline: true,
+                  },
+                  {
+                    label: "Atlas",
+                    tone: "green" as const,
+                    overlayId: "agent:atlas" as const,
+                    baseline: true,
+                  },
+                  {
+                    label: "background tasks (total)",
+                    tone: "muted" as const,
+                    overlayId: "background-total" as const,
+                    baseline: false,
+                  },
+                ] as const
+              ).map((row) => {
+                const H = 28;
+                const padTop = 2;
+                const padBottom = 2;
+                const chartHeight = H - padTop - padBottom;
+                const baselineY = H - padBottom;
+                const barW = 0.85;
+                const barInset = (1 - barW) / 2;
+
+                const overlayValues = timeSeriesById.get(row.overlayId)?.values ?? [];
+                const baselineMax = row.baseline ? maxCount(overallValues) : 0;
+                const overlayMax = maxCount(overlayValues);
+                const scaleMax = Math.max(1, row.baseline ? Math.max(baselineMax, overlayMax) : overlayMax || 1);
+
+                return (
+                  <div key={row.overlayId} className="timeSeriesRow" data-tone={row.tone}>
+                    <div className="timeSeriesRowLabel">{row.label}</div>
+                    <div className="timeSeriesSvgWrap">
+                      <svg className="timeSeriesSvg" viewBox={viewBox} preserveAspectRatio="none" aria-hidden="true">
+                        {Array.from({ length: Math.floor(buckets / minuteStep) + 1 }, (_, idx) => {
+                          const x = idx * minuteStep;
+                          if (x < 0 || x > buckets) return null;
+                          return (
+                            <line
+                              key={`g-${idx}`}
+                              className="timeSeriesGridline"
+                              x1={x}
+                              x2={x}
+                              y1={0}
+                              y2={H}
+                            />
+                          );
+                        })}
+
+                        {row.baseline
+                          ? overallValues.slice(0, buckets).map((v, i) => {
+                              const h = barHeight(v ?? 0, scaleMax, chartHeight);
+                              if (!h) return null;
+                              const barX = i + barInset;
+                              return (
+                                <rect
+                                  key={`b-${i}`}
+                                  className="timeSeriesBarBaseline"
+                                  x={barX}
+                                  y={baselineY - h}
+                                  width={barW}
+                                  height={h}
+                                />
+                              );
+                            })
+                          : null}
+
+                        {overlayValues.slice(0, buckets).map((v, i) => {
+                          const h = barHeight(v ?? 0, scaleMax, chartHeight);
+                          if (!h) return null;
+                          const barX = i + barInset;
+                          return (
+                            <rect
+                              key={`o-${i}`}
+                              className="timeSeriesBar"
+                              x={barX}
+                              y={baselineY - h}
+                              width={barW}
+                              height={h}
+                            />
+                          );
+                        })}
+                      </svg>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="timeSeriesAxisBottom" aria-hidden="true">
+              <div />
+              <div className="timeSeriesAxisBottomLabels">
+                <span className="timeSeriesAxisBottomLabel">-5m</span>
+                <span className="timeSeriesAxisBottomLabel">-4m</span>
+                <span className="timeSeriesAxisBottomLabel">-3m</span>
+                <span className="timeSeriesAxisBottomLabel">-2m</span>
+                <span className="timeSeriesAxisBottomLabel">-1m</span>
+                <span className="timeSeriesAxisBottomLabel">Now</span>
+              </div>
+            </div>
+          </section>
+
           <section className="grid2">
             <article className="card">
               <div className="cardHeader">

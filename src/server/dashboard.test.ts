@@ -132,4 +132,47 @@ describe("buildDashboardPayload", () => {
       fs.rmSync(projectRoot, { recursive: true, force: true })
     }
   })
+
+  it("includes timeSeries and sanitized raw payload when no sessions exist", () => {
+    const storageRoot = mkStorageRoot()
+    const storage = getStorageRoots(storageRoot)
+    const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "omo-project-"))
+
+    try {
+      const payload = buildDashboardPayload({
+        projectRoot,
+        storage,
+        nowMs: 2000,
+      })
+
+      expect(payload).toHaveProperty("timeSeries")
+      expect(payload.raw).toHaveProperty("timeSeries")
+
+      const sensitiveKeys = ["prompt", "input", "output", "error", "state"]
+
+      const hasSensitiveKeys = (value: unknown): boolean => {
+        if (typeof value !== "object" || value === null) {
+          return false
+        }
+
+        for (const key of Object.keys(value)) {
+          if (sensitiveKeys.includes(key)) {
+            return true
+          }
+          const nextValue = (value as Record<string, unknown>)[key]
+          if (typeof nextValue === "object" && nextValue !== null) {
+            if (hasSensitiveKeys(nextValue)) {
+              return true
+            }
+          }
+        }
+        return false
+      }
+
+      expect(hasSensitiveKeys(payload.raw)).toBe(false)
+    } finally {
+      fs.rmSync(storageRoot, { recursive: true, force: true })
+      fs.rmSync(projectRoot, { recursive: true, force: true })
+    }
+  })
 })

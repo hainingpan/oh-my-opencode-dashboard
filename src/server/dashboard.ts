@@ -2,6 +2,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { readBoulderState, readPlanProgress } from "../ingest/boulder"
 import { deriveBackgroundTasks } from "../ingest/background-tasks"
+import { deriveTimeSeriesActivity, type TimeSeriesPayload } from "../ingest/timeseries"
 import { getMainSessionView, getStorageRoots, pickActiveSessionId, readMainSessionMetas, type OpenCodeStorageRoots, type SessionMetadata } from "../ingest/session"
 
 export type DashboardPayload = {
@@ -28,6 +29,7 @@ export type DashboardPayload = {
     lastTool: string
     timeline: string
   }>
+  timeSeries: TimeSeriesPayload
   raw: unknown
 }
 
@@ -92,6 +94,11 @@ export function buildDashboardPayload(opts: {
     : { agent: "unknown", currentTool: null, lastUpdated: null, sessionLabel: "(no session)", status: "unknown" as const }
 
   const tasks = sessionId ? deriveBackgroundTasks({ storage: opts.storage, mainSessionId: sessionId, nowMs }) : []
+  const timeSeries = deriveTimeSeriesActivity({
+    storage: opts.storage,
+    mainSessionId: sessionId ?? null,
+    nowMs,
+  })
 
   const payload: DashboardPayload = {
     mainSession: {
@@ -117,6 +124,7 @@ export function buildDashboardPayload(opts: {
       lastTool: t.lastTool ?? "-",
       timeline: typeof t.timeline === "string" ? t.timeline : "",
     })),
+    timeSeries,
     raw: null,
   }
 
@@ -124,6 +132,7 @@ export function buildDashboardPayload(opts: {
     mainSession: payload.mainSession,
     planProgress: payload.planProgress,
     backgroundTasks: payload.backgroundTasks,
+    timeSeries: payload.timeSeries,
   }
   return payload
 }
