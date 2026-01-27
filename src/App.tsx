@@ -292,6 +292,22 @@ function toDashboardPayload(json: unknown): DashboardPayload {
   const plan = (anyJson.planProgress ?? anyJson.plan_progress ?? {}) as Record<string, unknown>;
   const tasks = (anyJson.backgroundTasks ?? anyJson.background_tasks ?? []) as unknown;
 
+  function parsePlanSteps(stepsInput: unknown): Array<{ checked: boolean; text: string }> {
+    if (!Array.isArray(stepsInput)) return [];
+    
+    return stepsInput
+      .map((step): { checked: boolean; text: string } | null => {
+        if (!step || typeof step !== "object") return null;
+        
+        const stepObj = step as Record<string, unknown>;
+        const checked = typeof stepObj.checked === "boolean" ? stepObj.checked : false;
+        const text = typeof stepObj.text === "string" ? stepObj.text : "";
+        
+        return text.trim().length > 0 ? { checked, text } : null;
+      })
+      .filter((step): step is { checked: boolean; text: string } => step !== null);
+  }
+
   const backgroundTasks: BackgroundTask[] = Array.isArray(tasks)
     ? tasks.map((t, idx) => {
         const rec = (t ?? {}) as Record<string, unknown>;
@@ -316,6 +332,7 @@ function toDashboardPayload(json: unknown): DashboardPayload {
 
   const completed = Number(plan.completed ?? plan.done ?? 0) || 0;
   const total = Number(plan.total ?? plan.count ?? 0) || 0;
+  const steps = parsePlanSteps(plan.steps);
 
   const timeSeries = normalizeTimeSeries(anyJson.timeSeries, Date.now());
 
@@ -334,6 +351,7 @@ function toDashboardPayload(json: unknown): DashboardPayload {
       total,
       path: String(plan.path ?? FALLBACK_DATA.planProgress.path),
       statusPill: String(plan.statusPill ?? plan.status ?? FALLBACK_DATA.planProgress.statusPill),
+      steps,
     },
     backgroundTasks,
     timeSeries,
@@ -341,6 +359,7 @@ function toDashboardPayload(json: unknown): DashboardPayload {
   };
 }
 
+export { toDashboardPayload };
 export default function App() {
   const [connected, setConnected] = React.useState(false);
   const [data, setData] = React.useState<DashboardPayload>(FALLBACK_DATA);
