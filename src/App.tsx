@@ -281,6 +281,14 @@ function toNonEmptyString(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+export function formatBackgroundTaskTimelineCell(status: unknown, timeline: unknown): string {
+  const s = typeof status === "string" ? status.trim().toLowerCase() : "";
+  if (s === "unknown") return "";
+  if (s === "queued") return "-";
+
+  return toNonEmptyString(timeline) ?? "-";
+}
+
 function toDashboardPayload(json: unknown): DashboardPayload {
   if (!json || typeof json !== "object") {
     return { ...FALLBACK_DATA, raw: json };
@@ -872,7 +880,7 @@ export default function App() {
                       </td>
                       <td className="mono">{t.toolCalls}</td>
                       <td className="mono">{t.lastTool}</td>
-                      <td className="mono muted">{t.status.toLowerCase() === "queued" ? "-" : t.timeline || "-"}</td>
+                      <td className="mono muted">{formatBackgroundTaskTimelineCell(t.status, t.timeline)}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -1,7 +1,18 @@
-import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
+
+const fs = await vi.importActual<typeof import("node:fs")>("node:fs")
+
+vi.mock("node:fs", async () => {
+  const actualFs = await vi.importActual<typeof import("node:fs")>("node:fs")
+  return {
+    ...actualFs,
+    readdirSync: vi.fn(actualFs.readdirSync),
+  }
+})
+
+import * as mockedFs from "node:fs"
 import { deriveBackgroundTasks } from "./background-tasks"
 import { getStorageRoots } from "./session"
 
@@ -602,6 +613,7 @@ describe("deriveBackgroundTasks", () => {
     expect(rows[0].toolCalls).toBe(0) // No tool calls in fallback session
     expect(rows[0].lastTool).toBe(null)
     expect(rows[0].status).toBe("unknown") // Should be unknown since session exists but no tool calls
+    expect(rows[0].timeline).toBe("") // Unknown status should emit no timeline
   })
 
   it("links sync delegate_task rows to Background sessions when forced-to-background but waited", () => {
@@ -888,6 +900,9 @@ describe("deriveBackgroundTasks", () => {
     const storageRoot = mkStorageRoot()
     const storage = getStorageRoots(storageRoot)
     const mainSessionId = "ses_main"
+    
+    // Clear any previous mock state
+    vi.clearAllMocks()
 
     const msgDir = path.join(storage.message, mainSessionId)
     fs.mkdirSync(msgDir, { recursive: true })
@@ -977,7 +992,7 @@ describe("deriveBackgroundTasks", () => {
       "utf8"
     )
 
-    const readdirSpy = vi.spyOn(fs, "readdirSync")
+    const readdirSpy = vi.mocked(mockedFs.readdirSync)
 
     // #when
     const rows = deriveBackgroundTasks({ storage, mainSessionId })
@@ -986,6 +1001,5 @@ describe("deriveBackgroundTasks", () => {
     const backgroundReads = readdirSpy.mock.calls.filter((call) => call[0] === childMsgDir)
     expect(rows.length).toBe(2)
     expect(backgroundReads.length).toBe(1)
-    readdirSpy.mockRestore()
   })
 })

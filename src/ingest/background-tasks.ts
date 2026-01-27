@@ -336,7 +336,7 @@ export function deriveBackgroundTasks(opts: {
         toolCalls: backgroundSessionId ? stats.toolCalls : null,
         lastTool: stats.lastTool,
         lastModel,
-        timeline: formatTimeline(startedAt, timelineEndMs),
+        timeline: status === "unknown" ? "" : formatTimeline(startedAt, timelineEndMs),
         sessionId: backgroundSessionId,
       })
     }
