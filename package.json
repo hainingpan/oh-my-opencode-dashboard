@@ -5,8 +5,7 @@
   "license": "SUL-1.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/code-yeongyu/oh-my-opencode",
-    "directory": "oh-my-opencode-dashboard"
+    "url": "https://github.com/WilliamJudge94/oh-my-opencode-dashboard"
   },
   "type": "module",
   "bin": {
@@ -18,8 +17,7 @@
     "index.html",
     "vite.config.ts",
     "tsconfig.json",
-    "gui.png",
-    "timeseries-ui.png",
+    "dashboard-ui.png",
     "README.md"
   ],
   "publishConfig": {
