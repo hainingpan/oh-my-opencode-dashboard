@@ -18,6 +18,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fail if tag already exists
+        run: |
+          set -euo pipefail
+          VERSION=$(jq -r '.version' package.json)
+          TAG="v${VERSION}"
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "::error::Tag already exists: ${TAG}"
+            exit 1
+          fi
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
