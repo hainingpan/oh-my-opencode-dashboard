@@ -29,6 +29,8 @@ type ToolCallSummary = {
   tool: string;
   status: string;
   createdAtMs: number | null;
+  output?: unknown;
+  error?: unknown;
 };
 
 type ToolCallsResponse = {
@@ -614,6 +616,8 @@ function toToolCallSummary(value: unknown): ToolCallSummary | null {
     tool,
     status,
     createdAtMs: typeof createdAtRaw === "number" ? Math.floor(createdAtRaw) : null,
+    output: rec.output,
+    error: rec.error,
   };
 }
 
@@ -1645,6 +1649,22 @@ export default function App() {
                                         <div className="mono muted bgTaskToolCallId" title={c.callId}>
                                           {c.callId}
                                         </div>
+                                        {c.output !== undefined && (
+                                          <details className="toolCallOutput">
+                                            <summary className="mono muted">Output</summary>
+                                            <pre className="code toolCallOutputPre">
+                                              <code>{typeof c.output === "string" ? c.output : JSON.stringify(c.output, null, 2)}</code>
+                                            </pre>
+                                          </details>
+                                        )}
+                                        {c.error !== undefined && (
+                                          <details className="toolCallError">
+                                            <summary className="mono" style={{ color: "var(--red-9)" }}>Error</summary>
+                                            <pre className="code toolCallErrorPre">
+                                              <code>{typeof c.error === "string" ? c.error : JSON.stringify(c.error, null, 2)}</code>
+                                            </pre>
+                                          </details>
+                                        )}
                                       </div>
                                     ))}
                                   </div>
@@ -1774,6 +1794,22 @@ export default function App() {
                                         <div className="mono muted bgTaskToolCallId" title={c.callId}>
                                           {c.callId}
                                         </div>
+                                        {c.output !== undefined && (
+                                          <details className="toolCallOutput">
+                                            <summary className="mono muted">Output</summary>
+                                            <pre className="code toolCallOutputPre">
+                                              <code>{typeof c.output === "string" ? c.output : JSON.stringify(c.output, null, 2)}</code>
+                                            </pre>
+                                          </details>
+                                        )}
+                                        {c.error !== undefined && (
+                                          <details className="toolCallError">
+                                            <summary className="mono" style={{ color: "var(--red-9)" }}>Error</summary>
+                                            <pre className="code toolCallErrorPre">
+                                              <code>{typeof c.error === "string" ? c.error : JSON.stringify(c.error, null, 2)}</code>
+                                            </pre>
+                                          </details>
+                                        )}
                                       </div>
                                     ))}
                                   </div>

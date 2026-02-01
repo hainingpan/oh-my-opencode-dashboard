@@ -1137,3 +1137,25 @@ input.field {
     grid-template-columns: 1fr;
   }
 }
+
+.toolCallOutput,
+.toolCallError {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.toolCallOutput summary,
+.toolCallError summary {
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.toolCallOutputPre,
+.toolCallErrorPre {
+  max-height: 300px;
+  overflow: auto;
+  font-size: 11px;
+  margin-top: 4px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
