@@ -27,7 +27,7 @@ export type StoredToolPart = {
   type: "tool"
   callID: string
   tool: string
-  state: { status: "pending" | "running" | "completed" | "error"; input: Record<string, unknown> }
+  state: { status: "pending" | "running" | "completed" | "error"; input: Record<string, unknown>; output?: unknown; error?: unknown }
 }
 
 export type MainSessionView = {

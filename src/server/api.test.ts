@@ -63,7 +63,7 @@ function writeToolPart(opts: {
   )
 }
 
-const sensitiveKeys = ["prompt", "input", "output", "error", "state"]
+const sensitiveKeys = ["prompt", "input", "state"]
 
 function hasSensitiveKeys(value: unknown): boolean {
   if (!value || typeof value !== "object") return false
@@ -176,7 +176,7 @@ describe('API Routes', () => {
     expect(hasSensitiveKeys(data)).toBe(false)
   })
 
-  it('should redact tool call payload fields', async () => {
+  it('should redact input/prompt but expose output/error', async () => {
     const storageRoot = mkStorageRoot()
     const projectRoot = mkProjectRoot()
     writeMessageMeta({ storageRoot, sessionId: "ses_redact", messageId: "msg_1", created: 1000 })
@@ -203,6 +203,10 @@ describe('API Routes', () => {
     expect(data.ok).toBe(true)
     expect(data.toolCalls.length).toBe(1)
     expect(hasSensitiveKeys(data)).toBe(false)
+    
+    // Verify output/error ARE present (not redacted)
+    expect(data.toolCalls[0].output).toBe("NOPE")
+    expect(data.toolCalls[0].error).toBe("NOPE")
   })
 
   // /sessions was intentionally removed along with the manual session picker.

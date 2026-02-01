@@ -16,6 +16,8 @@ export type ToolCallSummary = {
   tool: string
   status: "pending" | "running" | "completed" | "error" | "unknown"
   createdAtMs: number | null
+  output?: unknown
+  error?: unknown
 }
 
 export type ToolCallSummaryResult = {
@@ -27,7 +29,7 @@ type StoredToolPartMeta = {
   type?: string
   callID?: string
   tool?: string
-  state?: { status?: string }
+  state?: { status?: string; output?: unknown; error?: unknown }
 }
 
 function readJsonFile<T>(filePath: string, fsLike: FsLike): T | null {
@@ -135,6 +137,8 @@ export function deriveToolCalls(opts: {
         status: readStatus(part.state),
         createdAtMs,
         createdSortKey,
+        output: part.state?.output,
+        error: part.state?.error,
       })
     }
   }

@@ -132,7 +132,7 @@ describe("deriveToolCalls", () => {
     }
   })
 
-  it("redacts tool call payload fields", () => {
+  it("redacts input/prompt but exposes output/error", () => {
     const storageRoot = mkStorageRoot()
     const storage = getStorageRoots(storageRoot)
     const sessionId = "ses_main"
@@ -155,7 +155,11 @@ describe("deriveToolCalls", () => {
     const result = deriveToolCalls({ storage, sessionId })
     expect(result.toolCalls.length).toBe(1)
 
-    const banned = new Set(["prompt", "input", "output", "error", "state"])
+    const banned = new Set(["prompt", "input", "state"])
     expect(hasBannedKeys(result.toolCalls[0], banned)).toBe(false)
+    
+    // Verify output/error ARE present (not redacted)
+    expect(result.toolCalls[0].output).toBe("NOPE")
+    expect(result.toolCalls[0].error).toBe("NOPE")
   })
 })
