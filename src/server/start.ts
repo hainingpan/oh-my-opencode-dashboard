@@ -12,11 +12,23 @@ const distRoot = join(import.meta.dir, '../../dist')
 if (!existsSync(join(distRoot, 'index.html'))) {
   console.log('Building dashboard UI (first run)...')
   const projectRoot = join(import.meta.dir, '../..')
-  const result = Bun.spawnSync(['bun', 'run', 'build'], { 
+  
+  console.log('Installing dependencies...')
+  const installResult = Bun.spawnSync(['bun', 'install'], { 
     cwd: projectRoot,
     stdio: ['inherit', 'inherit', 'inherit']
   })
-  if (result.exitCode !== 0) {
+  if (installResult.exitCode !== 0) {
+    console.error('Failed to install dependencies! Please run "bun install" manually.')
+    process.exit(1)
+  }
+  
+  console.log('Building UI...')
+  const buildResult = Bun.spawnSync(['bun', 'run', 'build'], { 
+    cwd: projectRoot,
+    stdio: ['inherit', 'inherit', 'inherit']
+  })
+  if (buildResult.exitCode !== 0) {
     console.error('Build failed! Please run "bun run build" manually.')
     process.exit(1)
   }
