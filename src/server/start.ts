@@ -1,10 +1,27 @@
 #!/usr/bin/env bun
 import { Hono } from 'hono'
 import { join } from 'node:path'
+import { existsSync } from 'node:fs'
 import { parseArgs } from 'util'
 import { createApi } from "./api"
 import { createDashboardStore } from "./dashboard"
 import { getOpenCodeStorageDir } from "../ingest/paths"
+
+// Auto-build if dist folder is missing (for GitHub direct install)
+const distRoot = join(import.meta.dir, '../../dist')
+if (!existsSync(join(distRoot, 'index.html'))) {
+  console.log('Building dashboard UI (first run)...')
+  const projectRoot = join(import.meta.dir, '../..')
+  const result = Bun.spawnSync(['bun', 'run', 'build'], { 
+    cwd: projectRoot,
+    stdio: ['inherit', 'inherit', 'inherit']
+  })
+  if (result.exitCode !== 0) {
+    console.error('Build failed! Please run "bun run build" manually.')
+    process.exit(1)
+  }
+  console.log('Build complete!')
+}
 
 const { values } = parseArgs({
   args: Bun.argv,
@@ -31,8 +48,6 @@ const store = createDashboardStore({
 })
 
 app.route('/api', createApi({ store, storageRoot, projectRoot: project }))
-
-const distRoot = join(import.meta.dir, '../../dist')
 
 // SPA fallback middleware
 app.use('*', async (c, next) => {
