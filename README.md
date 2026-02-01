@@ -27,6 +27,20 @@ Local-only, read-only dashboard for viewing OpenCode & OhMyOpenCode agent progre
 
 - Bun
 
+## Install (One-Liner from GitHub)
+
+Run directly from GitHub without npm account:
+
+```bash
+bunx --bun github:hainingpan/oh-my-opencode-dashboard
+```
+
+Or with a project path:
+
+```bash
+bunx --bun github:hainingpan/oh-my-opencode-dashboard -- --project /path/to/project
+```
+
 ## Install (npm)
 
 Run without installing globally (from your target project directory):
@@ -102,6 +116,14 @@ You can use this dashboard with plain OpenCode (no `.sisyphus/`):
 - Session discovery uses an exact directory match: your `--project` path is resolved + realpath-normalized, then compared to each session `meta.directory` (also realpath-normalized). No prefix / "contains" matching.
 
 ## Privacy / Redaction
+
+> **Note**: This fork is modified for local debugging and **DOES display tool output/errors**.
+
+Unlike the original dashboard, this fork shows:
+- Raw tool output (`state.output`)
+- Tool errors (`state.error`)
+
+This is useful for debugging which tool is stuck or what output a tool returned.
 
 This dashboard is designed to avoid sensitive data:
 
